@@ -1,4 +1,5 @@
 #!/bin/bash
 git fetch
+git merge origin/main
 sudo cp ./* /usr/bin
 sudo rm -r /usr/bin/update-web-toolkit
