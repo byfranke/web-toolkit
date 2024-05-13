@@ -54,13 +54,9 @@ Step : 2 Move to directory
 ```
 cd web-toolkit
 ```
-Step : 3 Permission to execute
+Step : 3 Permission and Execute
 ```
-chmod +x update-web-toolkit
-```
-Step : 4 Run
-```
-sudo ./update-web-toolkit
+sudo bash update-web-toolkit
 ```
 
 # Donations
