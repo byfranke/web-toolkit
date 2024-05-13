@@ -24,7 +24,7 @@ The scan-web script is a Bash script for performing a comprehensive scan of a sp
 **scan-websilence**
 The scan-websilence script is a simpler, more direct version for host scanning, using exclusively nmap. The script is configured to perform a stealthy scan of major TCP ports. This procedure is useful for determining open ports without attracting much attention.
 
-# sql-short
+**sql-short**
 The sql-short script is a Bash script that automates the use of sqlmap to test SQL injections on a specified URL or IP. It performs two phases of tests: one to discover available databases and another to list columns within those databases. The script uses the tampering technique space2comment to bypass simple space filters and sets sqlmap to act as a random user agent, also handling forms found during the scan.
 
 **webrecon**
