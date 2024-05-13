@@ -1,3 +1,4 @@
 #!/bin/bash
+sudo chmod +x *
 sudo cp ./* /usr/bin
 sudo rm -r /usr/bin/update-web-toolkit
