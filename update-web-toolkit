@@ -1,3 +1,4 @@
 #!/bin/bash
+git fetch
 sudo cp ./* /usr/bin
 sudo rm -r /usr/bin/update-web-toolkit
