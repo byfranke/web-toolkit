@@ -1,0 +1,71 @@
+#!/bin/bash
+
+FILE_PATH="/var/www/html/url.php"
+
+create_file() {
+    cat > $FILE_PATH <<EOL
+<?php
+\$hashtag = "#";
+\$e = "&";
+\$str = \$_GET['char'];
+echo "Usage: url.php?char=yourtext" . "<br/><br/>\n";
+echo rawurlencode(\$str) . "<br/><br/>\n";
+echo "Showing #: " . rawurlencode(\$hashtag) . "<br/>\n";
+echo "Showing &: " . rawurlencode(\$e);
+?>
+EOL
+}
+
+start_server() {
+    sudo service apache2 start
+    IP_ADDR=$(ip addr show | grep "inet " | grep -v 127.0.0.1 | awk '{print $2}' | cut -d/ -f1 | head -n 1)
+    firefox "http://$IP_ADDR/url.php?char=$1" &
+}
+
+stop_server() {
+    sudo service apache2 stop
+}
+
+show_help() {
+    echo "Usage:"
+    echo "  urlchar start : Starts service and opens the browser."
+    echo "  urlchar stop : Stop service."
+    echo "  urlchar -c \"your text\" : Opens the browser with the specified text."
+    echo "  urlchar -r : Replaces the url.php file."
+    echo "  urlchar -h : Shows this help message."
+}
+
+if [ ! -d "/var/www/html" ]; then
+    echo "Directory /var/www/html does not exist!"
+    exit 1
+elif [ ! -f "$FILE_PATH" ]; then
+    create_file
+fi
+
+case "$1" in
+    start)
+        start_server
+        ;;
+    -c)
+        if [[ -n "$2" ]]; then
+            start_server "$2"
+        else
+            echo "You must provide a text after -c option."
+        fi
+        ;;
+    stop)
+        stop_server
+        ;;
+    -r)
+        create_file
+        echo "url.php has been replaced."
+        ;;
+    -h)
+        show_help
+        ;;
+    *)
+        echo "Invalid option. Use urlchar -h for help."
+        ;;
+esac
+
+exit 0

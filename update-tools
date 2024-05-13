@@ -1,0 +1,3 @@
+#!/bin/bash
+sudo cp ./* /usr/bin
+sudo rm -r /usr/bin/update-tools
