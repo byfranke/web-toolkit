@@ -1,6 +1,3 @@
 #!/bin/bash
-cd ..
-git clone https://github.com/byfranke/web-toolkit
-cd web-toolkit
 sudo cp ./* /usr/bin
 sudo rm -r /usr/bin/update-web-toolkit
