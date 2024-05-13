@@ -67,5 +67,4 @@ sudo ./update-web-toolkit
 
 If you find these tools useful and would like to support ongoing development and maintenance, please consider making a donation. Your contribution helps ensure that these tools are regularly updated and improved, benefiting the cybersecurity community. Any amount is greatly appreciated and will make a significant difference in supporting this project. Thank you for considering supporting this work!
 
-**BTC DONATE:**
 Addres Bitcoin: bc1qkdh3eqpj87q5hlhc7pvm025hmsd9zp2kadxf76
