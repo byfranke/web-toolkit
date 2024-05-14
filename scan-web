@@ -1,7 +1,9 @@
 #!/bin/bash
 
 if [ "$#" -eq 0 ]; then
-    echo "Example: sudo general-scan IP"
+    echo "scan-web v1.0"
+    echo "https://github.com/byfranke"
+    echo "Example: sudo scan-web IP"
     exit 1
 fi
 echo -e "\nWhatWeb"
