@@ -1,6 +1,8 @@
 #!/bin/bash
 
 if [ "$#" -ne 1 ]; then
+    echo "scan-websilence v1.0"
+    echo "https://github.com/byfranke"
     echo "Usage: $0 <URL/IP>"
     exit 1
 fi
