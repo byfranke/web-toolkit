@@ -1,6 +1,8 @@
 #!/bin/bash
 
 if [ "$#" -ne 2 ]; then
+    echo "nuclei-hunter v1.0"
+    echo "https://github.com/byfranke"
     echo "Usage: $0 [domain] [template]"
     echo "Example: $0 example.com vulnerabilities"
     exit 1
