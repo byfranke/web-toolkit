@@ -1,6 +1,8 @@
 #!/bin/bash
 
 if [ "$#" -ne 1 ]; then
+    echo "webrecon v1.0"
+    echo "https://github.com/byfranke"
     echo "Usage: $0 <URL>"
     exit 1
 fi
