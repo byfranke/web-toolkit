@@ -43,6 +43,11 @@ The webrecon script is designed to perform a simple reconnaissance on a specifie
 
 The update-web-toolkit script is a very simple Bash script that updates tools in the /usr/bin directory by copying all files from the current directory there. Then, it removes itself from the /usr/bin directory. This script can be used to facilitate the updating of command-line tools in a Unix-like system.
 
+# Requirements
+
+Kali Linux: Make sure your Kali Linux installation is up to date to have access to the latest versions of tools and libraries.
+Sqlmap, WhatWeb, Dirsearch, Subfinder e Nuclei.
+
 # How to Use
 
 Step : 1 Download
