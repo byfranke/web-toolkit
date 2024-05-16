@@ -46,7 +46,7 @@ The update-web-toolkit script is a very simple Bash script that updates tools in
 # Requirements
 
 Kali Linux: Make sure your Kali Linux installation is up to date to have access to the latest versions of tools and libraries.
-Sqlmap, WhatWeb, Dirsearch, Subfinder e Nuclei.
+Nmap, Sqlmap, WhatWeb, Dirsearch, Subfinder e Nuclei.
 
 # How to Use
 
