@@ -1,9 +1,0 @@
-#!/bin/bash
-
-dest="/usr/bin"
-
-sudo chmod +x *
-sudo cp ./* $dest
-sudo rm -r $dest/update-web-toolkit
-
-echo "Installation completed!"
