@@ -45,16 +45,14 @@ install_dependencies() {
         echo "[+] pip3 found."
     fi
 
-    echo -e "\n[*] Installing required Python dependencies..."
+    echo "[*] Installing required Python dependencies..."
     if [ -f "requirements.txt" ]; then
         pip3 install -r requirements.txt
     else
         echo "[!] requirements.txt not found. Skipping pip install."
     fi
 
-    echo -e "\n[*] Checking additional system dependencies..."
-
-    # Exemplo: nmap, sqlmap, wget, curl
+    echo "[*] Checking additional system dependencies..."
     for tool in nmap sqlmap wget curl; do
         if ! command -v "$tool" &> /dev/null; then
             echo "[!] $tool not found. Installing..."
@@ -70,31 +68,31 @@ install_dependencies() {
         fi
     done
 
-    echo -e "\n[+] All dependencies checked/installed."
+    echo "[+] All dependencies checked/installed."
 }
 
 install_local_version() {
-    echo -e "\n[*] Installing local version of Web-Toolkit..."
+    echo "[*] Installing local version of Web-Toolkit..."
 
-    # Aqui assumimos que existe web-toolkit.py
     if [ ! -f "web-toolkit.py" ]; then
-        echo "[!] web-toolkit.py not found in current directory. Make sure you're in the web-toolkit folder."
+        echo "[!] web-toolkit.py not found in current directory."
         return
     fi
 
     install_dependencies
 
-    # Opcionalmente, podemos mover ou linkar para /usr/bin:
-    # sudo chmod +x web-toolkit.py
-    # sudo ln -s \"$(pwd)/web-toolkit.py\" /usr/bin/web-toolkit
-    # echo \"[+] Web-Toolkit is now installed globally as 'web-toolkit'\"
+    sudo chmod +x web-toolkit.py
+    sudo cp web-toolkit.py /usr/bin/web-toolkit
+    echo "[+] Web-Toolkit installed as /usr/bin/web-toolkit"
 
-    echo "[+] Web-Toolkit is ready to use. Você pode rodar com:"
-    echo "    python3 web-toolkit.py"
+    read -p "Do you want to run Web-Toolkit now? (y/n): " choice
+    if [[ $choice =~ ^[Yy]$ ]]; then
+        web-toolkit
+    fi
 }
 
 check_and_update() {
-    echo -e "\n[*] Checking for the latest version on GitHub ($GITHUB_REPO)..."
+    echo "[*] Checking for the latest version on GitHub ($GITHUB_REPO)..."
 
     git clone "$GITHUB_REPO" "$TEMP_DIR" 2>/dev/null
     if [ $? -ne 0 ]; then
@@ -109,11 +107,9 @@ check_and_update() {
     echo "[*] Moving old files to $BACKUP_DIR..."
     shopt -s extglob
 
-    # Move tudo exceto este script e a pasta Obsolete
     find . -maxdepth 1 -type f ! -name "$(basename "$0")" ! -name "setup.sh" -exec mv {} "$BACKUP_DIR" \;
     find . -maxdepth 1 -type d ! -name "$BACKUP_DIR" ! -name "." ! -name ".." -exec mv {} "$BACKUP_DIR" \;
 
-    # Copia os arquivos clonados para o diretório atual
     mv "$TEMP_DIR"/* ./ 2>/dev/null
     rm -rf "$TEMP_DIR"
 
