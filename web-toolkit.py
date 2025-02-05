@@ -30,8 +30,6 @@ conn = sqlite3.connect(db_path)
 
 GITHUB_REPO = "https://github.com/byfranke/web-toolkit"
 
-# --------------------- Database Setup ---------------------
-
 def init_db():
     conn.execute('CREATE TABLE IF NOT EXISTS projects ('
                  'id INTEGER PRIMARY KEY, '
@@ -47,8 +45,6 @@ def init_db():
                  'FOREIGN KEY(project_id) REFERENCES projects(id))')
     conn.commit()
 
-# --------------------- Encryption Helpers ---------------------
-
 def gen_key():
     return Fernet.generate_key()
 
@@ -57,8 +53,6 @@ def enc_data(data: str, key: bytes) -> bytes:
 
 def dec_data(data: bytes, key: bytes) -> str:
     return Fernet(key).decrypt(data).decode()
-
-# --------------------- Project Management ---------------------
 
 def create_project():
     while True:
@@ -80,7 +74,6 @@ def create_project():
         break
 
 def list_projects():
-    """List all projects on screen and return them as a list of rows."""
     cursor = conn.execute('SELECT id, name, created_at FROM projects')
     rows = cursor.fetchall()
     if not rows:
@@ -95,7 +88,6 @@ def get_project_by_id(pid: int):
     return c.fetchone()
 
 def pick_project_id() -> int:
-    """Prompts user to pick a project ID from the list."""
     rows = list_projects()
     if not rows:
         return 0
@@ -105,7 +97,6 @@ def pick_project_id() -> int:
     return 0
 
 def store_note_in_project(project_id: int, content: str):
-    """Stores content as a note in the given project, separated by a header line."""
     data = get_project_by_id(project_id)
     if not data:
         print("Invalid project.")
@@ -120,7 +111,6 @@ def store_note_in_project(project_id: int, content: str):
     print(f"Data saved to project: {pname}")
 
 def open_project():
-    """Open a project for interactive note management."""
     pid = pick_project_id()
     if pid == 0:
         return
@@ -162,9 +152,6 @@ def open_project():
             break
 
 def manage_notes_in_project(pid: int, enc_key: bytes):
-    """
-    Lists notes for the project, allows reading, editing, deleting.
-    """
     lcur = conn.execute('SELECT id, timestamp, encrypted_note FROM notes WHERE project_id = ?', (pid,))
     notes = lcur.fetchall()
     if not notes:
@@ -219,9 +206,6 @@ def manage_notes_in_project(pid: int, enc_key: bytes):
             print("Error decrypting note.")
 
 def export_note(pid: int, enc_key: bytes):
-    """
-    Allows user to pick a note from a project and export it to a file.
-    """
     lcur = conn.execute('SELECT id, timestamp FROM notes WHERE project_id = ?', (pid,))
     notes = lcur.fetchall()
     if not notes:
@@ -255,8 +239,6 @@ def export_note(pid: int, enc_key: bytes):
     except:
         print("Error decrypting note.")
 
-# --------------------- Dependencies & Tools ---------------------
-
 def install_dependencies():
     logging.info("Installing necessary tools...")
     if platform.system() == "Linux":
@@ -286,7 +268,6 @@ def install_dependencies():
         print("Unsupported OS.")
 
 def check_tool_installed(tool: str) -> bool:
-    """Checks if a tool is installed by attempting to locate it with 'which' or 'where'."""
     try:
         if platform.system() == "Windows":
             subprocess.run(['where', tool], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
@@ -307,8 +288,6 @@ def capture_cmd_output(cmd: List[str]) -> str:
         return combined.strip()
     except Exception as e:
         return f"Error running {cmd}: {e}"
-
-# --------------------- Validation Helpers ---------------------
 
 def validate_ip(ip: str) -> bool:
     try:
@@ -335,7 +314,6 @@ def query_whois(domain: str) -> str:
     except:
         return "WHOIS error."
 
-# --------------------- Rate Limiter Decorator ---------------------
 class RateLimiter:
     def __init__(self, max_calls: int, time_frame: int):
         self.max_calls = max_calls
@@ -351,7 +329,6 @@ class RateLimiter:
             return func(*args, **kwargs)
         return wrapper
 
-# --------------------- Enumeration / Scan Functions ---------------------
 @RateLimiter(10,60)
 def smtp_enum(ip:str, wl:Optional[List[str]]=None) -> str:
     if not validate_ip(ip):
@@ -378,13 +355,13 @@ def smtp_enum(ip:str, wl:Optional[List[str]]=None) -> str:
 def ssh_enum(ip:str) -> str:
     if not validate_ip(ip):
         return "Invalid IP."
-    user=input("SSH user: ")
-    pwd=getpass.getpass("SSH password: ")
-    c=paramiko.SSHClient()
+    user = input("SSH user: ")
+    pwd = getpass.getpass("SSH password: ")
+    c = paramiko.SSHClient()
     c.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     output = []
     try:
-        c.connect(ip,username=user,password=pwd)
+        c.connect(ip, username=user, password=pwd)
         output.append("SSH login success.")
     except paramiko.AuthenticationException:
         output.append("SSH auth error.")
@@ -395,7 +372,6 @@ def ssh_enum(ip:str) -> str:
     return "\n".join(output)
 
 def run_webrecon(url: str) -> str:
-    """Simulates the webrecon script logic: uses wget, then scans for sensitive keywords."""
     if not check_tool_installed("wget"):
         return "wget not installed."
     out = capture_cmd_output(['wget', '-m', '-e', 'robots=off', url])
@@ -433,50 +409,42 @@ def sql_injection_test(url:str) -> str:
     return capture_cmd_output(['sqlmap','-u',url,'--dbs','--tamper=space2comment','--random-agent','--forms','--crawl=2'])
 
 def scan_web_full(target:str) -> str:
-    """Performs a full web scan by chaining multiple commands/tools."""
     if not (validate_ip(target) or validate_domain(target) or validate_url(target)):
         return "Invalid target."
     outputs = []
     sep = "\n============##============\n"
 
-    # 1) whatweb
     if check_tool_installed("whatweb"):
         outputs.append("[whatweb output]\n" + capture_cmd_output(["whatweb", target]))
     else:
         outputs.append("whatweb not installed.")
 
-    # 2) integrated webrecon
     outputs.append("[webrecon output]\n" + run_webrecon(target))
 
-    # 3) nmap
     if check_tool_installed("nmap"):
         out_nmap = capture_cmd_output(["sudo","nmap","-v","-D","RND:25","-sS","--top-ports=25","--open","-T2","-Pn",target])
         outputs.append("[nmap output]\n" + out_nmap)
     else:
         outputs.append("nmap not installed.")
 
-    # 4) dirsearch
     if check_tool_installed("dirsearch"):
         out_dirsearch = capture_cmd_output(["dirsearch","-u",target,"-i","200,301,302,401","--random-agent"])
         outputs.append("[dirsearch output]\n" + out_dirsearch)
     else:
         outputs.append("dirsearch not installed.")
 
-    # 5) curl OPTIONS
     if check_tool_installed("curl"):
         out_curl = capture_cmd_output(["curl","-v","-X","OPTIONS",target])
         outputs.append("[curl OPTIONS output]\n" + out_curl)
     else:
         outputs.append("curl not installed.")
 
-    # 6) nuclei-hunter
     if check_tool_installed("nuclei-hunter"):
         out_nuc = capture_cmd_output(["nuclei-hunter",target,"http"])
         outputs.append("[nuclei-hunter output]\n" + out_nuc)
     else:
         outputs.append("nuclei-hunter not installed.")
 
-    # 7) nmap vuln
     if check_tool_installed("nmap"):
         out_nmap_vuln = capture_cmd_output(["sudo","nmap","-v","--open","-sSCV","-Pn","-O",target,"--script=vuln"])
         outputs.append("[nmap vuln output]\n" + out_nmap_vuln)
@@ -486,7 +454,6 @@ def scan_web_full(target:str) -> str:
     return sep.join(outputs)
 
 def nuclei_hunter_scan(domain:str, template:str) -> str:
-    """Runs subfinder and then nuclei with a specific template."""
     if not validate_domain(domain):
         return "Invalid domain."
     if not (check_tool_installed("subfinder") and check_tool_installed("nuclei")):
@@ -500,14 +467,12 @@ def nuclei_hunter_scan(domain:str, template:str) -> str:
         return f"Error in nuclei_hunter_scan: {e}"
 
 def scan_web_silence(target:str) -> str:
-    """Runs a quiet nmap scan (stealthy, fewer checks)."""
     if not (validate_ip(target) or validate_domain(target) or validate_url(target)):
         return "Invalid target."
     if not check_tool_installed("nmap"):
         return "nmap not installed."
     return capture_cmd_output(["sudo","nmap","-v","-D","RND:25","-sS","--top-ports=25","--open","-T2","-Pn",target])
 
-# --------------------- Post-scan handling ---------------------
 def do_smtp_enum():
     ip = input("IP: ")
     res = smtp_enum(ip)
@@ -550,7 +515,6 @@ def do_whois():
     ask_store_result("WHOIS Query", d, out)
 
 def ask_store_result(scan_name: str, target: str, result_data: str):
-    """After a scan/test, ask if the user wants to store the result in a project."""
     combined = f"{scan_name} on: {target}\n\n{result_data}"
     print("\nScan completed.\n")
     pid = pick_project_id()
@@ -570,7 +534,7 @@ def menu_scan():
         print("7 - Silent Scan")
         print("8 - WHOIS Query")
         print("9 - Return")
-        c=input("Choose: ")
+        c = input("Choose: ")
         if c=='1':
             do_full_scan()
         elif c=='2':
@@ -590,7 +554,6 @@ def menu_scan():
         else:
             break
 
-# --------------------- Update Toolkit Function ---------------------
 def update_toolkit():
     print("\n[*] Checking for the latest version on GitHub...")
     TEMP_DIR = os.path.join("/tmp", f"web_toolkit_temp_{int(time.time())}")
@@ -604,7 +567,7 @@ def update_toolkit():
     os.makedirs(backup_dir, exist_ok=True)
 
     print(f"[*] Moving old files to {backup_dir}...")
-    # Move all files except the DB directory, the log file, etc.
+
     for f in os.listdir('.'):
         if f not in (os.path.basename(sys.argv[0]), 'web_toolkit.log', db_dir, backup_dir, '.git'):
             try:
@@ -613,16 +576,13 @@ def update_toolkit():
             except:
                 pass
 
-    # Move new content from TEMP_DIR to current.
     for f in os.listdir(TEMP_DIR):
         src = os.path.join(TEMP_DIR, f)
         dst = os.path.join('.', f)
         subprocess.run(["mv", src, dst])
 
-    # Cleanup
     subprocess.run(["rm", "-rf", TEMP_DIR])
     print(f"[+] Updated to the latest version from GitHub. Old files moved to '{backup_dir}'.")
-
 
 def show_banner():
     banner = r"""
@@ -644,47 +604,20 @@ def show_help():
 HELP / HOW TO USE:
 
 1) MANAGE PROJECTS:
-   - Create Project: Creates a new, password-protected project where your notes and scans can be saved.
-   - Open Project (view/edit notes): Lists existing notes, lets you read, edit, delete, and export them.
-     Each project has its own password.
-
+   - Create Project
+   - Open Project (view/edit notes)
 2) SCAN TOOLS:
-   - Full Web Scan: Combines various tools (whatweb, webrecon, nmap, etc.) to give a broad overview.
-   - Web Recon: Simple website mirror & search for potential sensitive keywords in the cloned pages.
-   - SQLi Test: Quick test for SQL injection using sqlmap.
-   - SMTP Enum: VRFY check on an SMTP server to find valid users.
-   - SSH Enum: Attempts SSH login with a user-provided credential.
-   - Nuclei Hunter: Uses subfinder -> nuclei with a specified template.
-   - Silent Scan: Reduced, stealthy nmap scan with top 25 ports.
-   - WHOIS Query: Looks up domain registration details.
+   - Full Web Scan
+   - Web Recon
+   - SQLi Test
+   - SMTP Enum
+   - SSH Enum
+   - Nuclei Hunter
+   - Silent Scan
+   - WHOIS Query
+3) INSTALL DEPENDENCIES
+4) UPDATE TOOLKIT
 
-3) INSTALL DEPENDENCIES:
-   - Tries to install (nmap, sqlmap, wget, curl) via apt-get or pacman if on Linux. On Windows, manual install.
-
-4) UPDATE TOOLKIT:
-   - Checks out the latest version from GitHub, backs up your old files, and replaces them.
-
-STORING RESULTS:
-After performing each scan, you can choose a project to store the results as an encrypted note.
-
-EXAMPLE STEPS:
-   - Create a project and set its password.
-   - Use "Scan Tools" to do a Full Web Scan on a domain/IP.
-   - Choose the created project to store the results automatically.
-   - Later, "Open Project" to view or export notes.
-
-USAGE VIA CLI:
-   --install                   Installs dependencies
-   --scan-full <target>        Runs a full web scan on target
-   --web <url>                 Runs a basic web recon on url
-   --sql <url>                 Tests for SQL injection on url
-   --smtp <ip>                 SMTP enumeration on ip
-   --ssh <ip>                  SSH enumeration (interactive)
-   --nuclei-scan <dom> <tmpl>  Nuclei hunter scan
-   --scan-silence <target>     Silent web scan
-   --whois <domain>            WHOIS lookup
-
-NOTES:
 All data is stored in an encrypted SQLite database in ~/Documents/WebToolkitDB.
 """)
 
@@ -698,13 +631,13 @@ def main_menu():
             print("4 - Help")
             print("5 - Update Toolkit")
             print("6 - Exit")
-            choice=input("Choose: ")
+            choice = input("Choose: ")
             if choice=='1':
                 while True:
                     print("\n1 - Create Project")
                     print("2 - Open Project (view/edit notes)")
                     print("3 - Return to main menu")
-                    c2=input("Choose: ")
+                    c2 = input("Choose: ")
                     if c2=='1':
                         create_project()
                     elif c2=='2':
@@ -756,7 +689,7 @@ def main():
         res = smtp_enum(args.smtp)
         print(res)
     elif args.ssh:
-        print("SSH enumeration requires interactive username/password input. Use the menu instead.")
+        print("SSH enumeration requires interactive user/password input. Use the menu instead.")
     elif args.nuclei_scan:
         out = nuclei_hunter_scan(args.nuclei_scan[0], args.nuclei_scan[1])
         print(out)
