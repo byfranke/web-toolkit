@@ -9,6 +9,7 @@ Web-Toolkit is a versatile command-line tool designed to streamline and automate
 ### Project Management
 - **Secure Storage**: Create password-protected projects to securely store notes and scan results in an encrypted SQLite database.
 - **Comprehensive Note Handling**: Read, edit, and export your stored notes with ease.
+- **Based on [EncryptNotes](https://github.com/byfranke/EncryptNotes)**: This project management system is built upon the foundation of EncryptNotes, ensuring robust encryption and efficient note handling.
 
 ### Scan Tools
 - **Full Web Scan**: Combine multiple tools (e.g., nmap, webrecon) for a complete target overview.
