@@ -29,9 +29,43 @@ conn = sqlite3.connect(db_path)
 
 GITHUB_REPO = "https://github.com/byfranke/web-toolkit"
 
+def safe_input(prompt: str) -> Optional[str]:
+    try:
+        return input(prompt)
+    except KeyboardInterrupt:
+        print("\nOperation cancelled.")
+        return None
+
+def safe_getpass(prompt: str) -> Optional[str]:
+    try:
+        return getpass.getpass(prompt)
+    except KeyboardInterrupt:
+        print("\nOperation cancelled.")
+        return None
+
+def check_tool_installed(tool: str) -> bool:
+    try:
+        if platform.system() == "Windows":
+            subprocess.run(['where', tool], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+        else:
+            subprocess.run(['which', tool], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+        return True
+    except:
+        return False
+
 def init_db():
-    conn.execute('''CREATE TABLE IF NOT EXISTS projects (id INTEGER PRIMARY KEY, name TEXT NOT NULL, encryption_key TEXT NOT NULL, password_hash TEXT NOT NULL, created_at TEXT NOT NULL)''')
-    conn.execute('''CREATE TABLE IF NOT EXISTS notes (id INTEGER PRIMARY KEY, project_id INTEGER NOT NULL, timestamp TEXT NOT NULL, encrypted_note BLOB NOT NULL, FOREIGN KEY(project_id) REFERENCES projects(id))''')
+    conn.execute('''CREATE TABLE IF NOT EXISTS projects (
+                      id INTEGER PRIMARY KEY, 
+                      name TEXT NOT NULL, 
+                      encryption_key TEXT NOT NULL, 
+                      password_hash TEXT NOT NULL, 
+                      created_at TEXT NOT NULL)''')
+    conn.execute('''CREATE TABLE IF NOT EXISTS notes (
+                      id INTEGER PRIMARY KEY, 
+                      project_id INTEGER NOT NULL, 
+                      timestamp TEXT NOT NULL, 
+                      encrypted_note BLOB NOT NULL, 
+                      FOREIGN KEY(project_id) REFERENCES projects(id))''')
     conn.commit()
 
 def gen_key():
@@ -45,18 +79,23 @@ def dec_data(data: bytes, key: bytes) -> str:
 
 def create_project():
     while True:
-        name = input("Project name: ")
-        if not name.strip():
+        name = safe_input("Project name: ")
+        if name is None or not name.strip():
             print("Invalid name.")
             continue
-        pwd = getpass.getpass("Set a password for this project: ")
-        c_pwd = getpass.getpass("Confirm password: ")
+        pwd = safe_getpass("Set a password for this project: ")
+        if pwd is None:
+            continue
+        c_pwd = safe_getpass("Confirm password: ")
+        if c_pwd is None:
+            continue
         if pwd != c_pwd:
             print("Passwords do not match.")
             continue
         key = gen_key()
         pwh = hashlib.sha256(pwd.encode()).hexdigest()
-        conn.execute("INSERT INTO projects (name, encryption_key, password_hash, created_at) VALUES (?, ?, ?, ?)", (name, key, pwh, datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+        conn.execute("INSERT INTO projects (name, encryption_key, password_hash, created_at) VALUES (?, ?, ?, ?)",
+                     (name, key, pwh, datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
         conn.commit()
         print("Project created.")
         break
@@ -79,7 +118,9 @@ def pick_project_id() -> int:
     rows = list_projects()
     if not rows:
         return 0
-    pid_str = input("\nChoose project ID (0=none): ")
+    pid_str = safe_input("\nChoose project ID (0=none): ")
+    if pid_str is None:
+        return 0
     if pid_str.isdigit():
         return int(pid_str)
     return 0
@@ -105,7 +146,9 @@ def open_project():
     if not row:
         print("Project not found.")
         return
-    pwd = getpass.getpass("Enter the project password: ")
+    pwd = safe_getpass("Enter the project password: ")
+    if pwd is None:
+        return
     if hashlib.sha256(pwd.encode()).hexdigest() != row[3]:
         print("Wrong password.")
         return
@@ -115,9 +158,13 @@ def open_project():
         print("3 - Delete Project")
         print("4 - Export Note")
         print("5 - Return to previous menu")
-        choice = input("Choose an option: ")
+        choice = safe_input("Choose an option: ")
+        if choice is None:
+            break
         if choice == '1':
-            text = input("New note content: ")
+            text = safe_input("New note content: ")
+            if text is None:
+                continue
             ts = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             enc_note = enc_data(text, row[2])
             conn.execute("INSERT INTO notes (project_id, timestamp, encrypted_note) VALUES (?, ?, ?)", (pid, ts, enc_note))
@@ -145,7 +192,9 @@ def manage_notes_in_project(pid: int, enc_key: bytes):
     for n in notes:
         print(f"{n[0]} - {n[1]}")
     while True:
-        nid_str = input("Enter note ID to read/edit (0 to cancel): ")
+        nid_str = safe_input("Enter note ID to read/edit (0 to cancel): ")
+        if nid_str is None:
+            break
         if not nid_str.isdigit():
             print("Invalid input.")
             continue
@@ -159,35 +208,42 @@ def manage_notes_in_project(pid: int, enc_key: bytes):
             continue
         try:
             dec_note = dec_data(note_row[0], enc_key)
-            print(f"\nNote {nid} content:\n{dec_note}")
-            print("\n1 - Edit")
-            print("2 - Delete")
-            print("3 - Return to notes list")
-            nopt = input("Option: ")
-            if nopt == '1':
-                new_data = input("New content: ")
-                print("1 - Append")
-                print("2 - Replace")
-                ed_opt = input("Choose: ")
-                if ed_opt == '1':
-                    final_data = dec_note + "\n" + new_data
-                elif ed_opt == '2':
-                    final_data = new_data
-                else:
-                    print("Invalid.")
-                    continue
-                enc_note2 = enc_data(final_data, enc_key)
-                conn.execute('UPDATE notes SET encrypted_note = ? WHERE id = ?', (enc_note2, nid))
-                conn.commit()
-                print("Note updated.")
-            elif nopt == '2':
-                conn.execute('DELETE FROM notes WHERE id = ?', (nid,))
-                conn.commit()
-                print("Note deleted.")
-            else:
-                pass
-        except:
+        except Exception:
             print("Error decrypting note.")
+            continue
+        print(f"\nNote {nid} content:\n{dec_note}")
+        print("\n1 - Edit")
+        print("2 - Delete")
+        print("3 - Return to notes list")
+        nopt = safe_input("Option: ")
+        if nopt is None:
+            break
+        if nopt == '1':
+            new_data = safe_input("New content: ")
+            if new_data is None:
+                continue
+            print("1 - Append")
+            print("2 - Replace")
+            ed_opt = safe_input("Choose: ")
+            if ed_opt is None:
+                continue
+            if ed_opt == '1':
+                final_data = dec_note + "\n" + new_data
+            elif ed_opt == '2':
+                final_data = new_data
+            else:
+                print("Invalid.")
+                continue
+            enc_note2 = enc_data(final_data, enc_key)
+            conn.execute('UPDATE notes SET encrypted_note = ? WHERE id = ?', (enc_note2, nid))
+            conn.commit()
+            print("Note updated.")
+        elif nopt == '2':
+            conn.execute('DELETE FROM notes WHERE id = ?', (nid,))
+            conn.commit()
+            print("Note deleted.")
+        else:
+            continue
 
 def export_note(pid: int, enc_key: bytes):
     lcur = conn.execute('SELECT id, timestamp FROM notes WHERE project_id = ?', (pid,))
@@ -197,8 +253,8 @@ def export_note(pid: int, enc_key: bytes):
         return
     for n in notes:
         print(f"{n[0]} - {n[1]}")
-    nid = input("Enter note ID to export: ")
-    if not nid.isdigit():
+    nid = safe_input("Enter note ID to export: ")
+    if nid is None or not nid.isdigit():
         print("Invalid.")
         return
     nid = int(nid)
@@ -209,17 +265,20 @@ def export_note(pid: int, enc_key: bytes):
         return
     try:
         dec_note = dec_data(erow[0], enc_key)
-        path = input("Export path (directory or file), empty=current dir: ")
-        if not path:
-            path = os.path.join(os.getcwd(), f"note_{nid}.txt")
-        if os.path.isdir(path):
-            fname = f"note_{nid}_{int(time.time())}.txt"
-            path = os.path.join(path, fname)
-        with open(path, 'w') as f:
-            f.write(dec_note)
-        print(f"Exported to {path}")
-    except:
+    except Exception:
         print("Error decrypting note.")
+        return
+    path = safe_input("Export path (directory or file), empty=current dir: ")
+    if path is None:
+        return
+    if not path:
+        path = os.path.join(os.getcwd(), f"note_{nid}.txt")
+    if os.path.isdir(path):
+        fname = f"note_{nid}_{int(time.time())}.txt"
+        path = os.path.join(path, fname)
+    with open(path, 'w') as f:
+        f.write(dec_note)
+    print(f"Exported to {path}")
 
 def capture_cmd_output(cmd: List[str]) -> str:
     print(f"\nRunning: {' '.join(cmd)}")
@@ -282,17 +341,17 @@ class RateLimiter:
             return func(*args, **kwargs)
         return wrapper
 
-@RateLimiter(10,60)
-def smtp_enum(ip:str, wl:Optional[List[str]]=None) -> str:
+@RateLimiter(10, 60)
+def smtp_enum(ip: str, wl: Optional[List[str]] = None) -> str:
     if not validate_ip(ip):
         return "Invalid IP."
     if not wl:
-        wl=["admin","guest","info"]
+        wl = ["admin", "guest", "info"]
     result = []
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.settimeout(5)
-        s.connect((ip,25))
+        s.connect((ip, 25))
         banner = s.recv(1024).decode(errors='ignore')
         result.append(f"Banner: {banner}")
         for user in wl:
@@ -305,11 +364,15 @@ def smtp_enum(ip:str, wl:Optional[List[str]]=None) -> str:
         result.append(f"SMTP enumeration error: {e}")
     return "\n".join(result)
 
-def ssh_enum(ip:str) -> str:
+def ssh_enum(ip: str) -> str:
     if not validate_ip(ip):
         return "Invalid IP."
-    user = input("SSH user: ")
-    pwd = getpass.getpass("SSH password: ")
+    user = safe_input("SSH user: ")
+    if user is None:
+        return ""
+    pwd = safe_getpass("SSH password: ")
+    if pwd is None:
+        return ""
     c = paramiko.SSHClient()
     c.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     output = []
@@ -355,14 +418,14 @@ def web_recon(url: str) -> str:
         return "Invalid URL."
     return run_webrecon(url)
 
-def sql_injection_test(url:str) -> str:
+def sql_injection_test(url: str) -> str:
     if not validate_url(url):
         return "Invalid URL."
     if not check_tool_installed("sqlmap"):
         return "sqlmap not installed."
-    return capture_cmd_output(['sqlmap','-u',url,'--dbs','--tamper=space2comment','--random-agent','--forms','--crawl=2'])
+    return capture_cmd_output(['sqlmap', '-u', url, '--dbs', '--tamper=space2comment', '--random-agent', '--forms', '--crawl=2'])
 
-def scan_web_full(target:str) -> str:
+def scan_web_full(target: str) -> str:
     if not (validate_ip(target) or validate_domain(target) or validate_url(target)):
         return "Invalid target."
     outputs = []
@@ -373,97 +436,119 @@ def scan_web_full(target:str) -> str:
         outputs.append("whatweb not installed.")
     outputs.append("[webrecon output]\n" + run_webrecon(target))
     if check_tool_installed("nmap"):
-        out_nmap = capture_cmd_output(["sudo","nmap","-v","-D","RND:25","-sS","--top-ports=25","--open","-T2","-Pn",target])
+        out_nmap = capture_cmd_output(["sudo", "nmap", "-v", "-D", "RND:25", "-sS", "--top-ports=25", "--open", "-T2", "-Pn", target])
         outputs.append("[nmap output]\n" + out_nmap)
     else:
         outputs.append("nmap not installed.")
     if check_tool_installed("gobuster"):
-        default_wordlist = "/usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt"
+        default_wordlist = "/usr/share/seclists/Discovery/Web-Content/common.txt"
         out_gobuster = capture_cmd_output(["gobuster", "dir", "-u", target, "-w", default_wordlist, "-t", "50"])
         outputs.append("[gobuster output]\n" + out_gobuster)
     else:
         outputs.append("gobuster not installed.")
     if check_tool_installed("curl"):
-        out_curl = capture_cmd_output(["curl","-v","-X","OPTIONS",target])
+        out_curl = capture_cmd_output(["curl", "-v", "-X", "OPTIONS", target])
         outputs.append("[curl OPTIONS output]\n" + out_curl)
     else:
         outputs.append("curl not installed.")
     if check_tool_installed("nuclei-hunter"):
-        out_nuc = capture_cmd_output(["nuclei-hunter",target,"http"])
+        out_nuc = capture_cmd_output(["nuclei-hunter", target, "http"])
         outputs.append("[nuclei-hunter output]\n" + out_nuc)
     else:
         outputs.append("nuclei-hunter not installed.")
     if check_tool_installed("nmap"):
-        out_nmap_vuln = capture_cmd_output(["sudo","nmap","-v","--open","-sSCV","-Pn","-O",target,"--script=vuln"])
+        out_nmap_vuln = capture_cmd_output(["sudo", "nmap", "-v", "--open", "-sSCV", "-Pn", "-O", target, "--script=vuln"])
         outputs.append("[nmap vuln output]\n" + out_nmap_vuln)
     else:
         outputs.append("nmap not installed for vuln scan.")
     return sep.join(outputs)
 
-def nuclei_hunter_scan(domain:str, template:str) -> str:
+def nuclei_hunter_scan(domain: str, template: str) -> str:
     if not validate_domain(domain):
         return "Invalid domain."
     if not (check_tool_installed("subfinder") and check_tool_installed("nuclei")):
         return "subfinder or nuclei not installed."
     try:
-        sf = subprocess.run(["subfinder","-d",domain], capture_output=True, text=True, check=True).stdout
-        template_path = os.path.join(os.path.expanduser("~"), ".local","nuclei-templates",template)
-        out = subprocess.run(["nuclei","-t",template_path,"-c","50"], input=sf, text=True, capture_output=True)
-        return "[nuclei-hunter scan]\n"+ out.stdout + (("\n[stderr]\n"+out.stderr) if out.stderr else "")
+        sf = subprocess.run(["subfinder", "-d", domain], capture_output=True, text=True, check=True).stdout
+        template_path = os.path.join(os.path.expanduser("~"), ".local", "nuclei-templates", template)
+        out = subprocess.run(["nuclei", "-t", template_path, "-c", "50"], input=sf, text=True, capture_output=True)
+        return "[nuclei-hunter scan]\n" + out.stdout + (("\n[stderr]\n" + out.stderr) if out.stderr else "")
     except Exception as e:
         return f"Error in nuclei_hunter_scan: {e}"
 
-def scan_web_silence(target:str) -> str:
+def scan_web_silence(target: str) -> str:
     if not (validate_ip(target) or validate_domain(target) or validate_url(target)):
         return "Invalid target."
     if not check_tool_installed("nmap"):
         return "nmap not installed."
-    return capture_cmd_output(["sudo","nmap","-v","-D","RND:25","-sS","--top-ports=25","--open","-T2","-Pn",target])
+    return capture_cmd_output(["sudo", "nmap", "-v", "-D", "RND:25", "-sS", "--top-ports=25", "--open", "-T2", "-Pn", target])
 
 def do_smtp_enum():
-    ip = input("IP: ")
+    ip = safe_input("IP: ")
+    if ip is None:
+        return
     res = smtp_enum(ip)
     ask_store_result("SMTP Enumeration", ip, res)
 
 def do_ssh_enum():
-    ip = input("IP: ")
+    ip = safe_input("IP: ")
+    if ip is None:
+        return
     res = ssh_enum(ip)
     ask_store_result("SSH Enumeration", ip, res)
 
 def do_web_recon():
-    url = input("URL: ")
+    url = safe_input("URL: ")
+    if url is None:
+        return
     out = web_recon(url)
     ask_store_result("Web Recon", url, out)
 
 def do_sql_injection_test():
-    url = input("URL: ")
+    url = safe_input("URL: ")
+    if url is None:
+        return
     out = sql_injection_test(url)
     ask_store_result("SQL Injection Test", url, out)
 
 def do_full_scan():
-    tgt = input("Target: ")
+    tgt = safe_input("Target: ")
+    if tgt is None:
+        return
     out = scan_web_full(tgt)
     ask_store_result("Full Web Scan", tgt, out)
 
 def do_nuclei_hunter():
-    d = input("Domain: ")
-    t = input("Template: ")
+    d = safe_input("Domain: ")
+    if d is None:
+        return
+    t = safe_input("Template: ")
+    if t is None:
+        return
     res = nuclei_hunter_scan(d, t)
     ask_store_result("Nuclei Hunter", d, res)
 
 def do_silence_scan():
-    tgt = input("Target: ")
+    tgt = safe_input("Target: ")
+    if tgt is None:
+        return
     res = scan_web_silence(tgt)
     ask_store_result("Silent Web Scan", tgt, res)
 
 def do_whois():
-    d = input("Domain: ")
+    d = safe_input("Domain: ")
+    if d is None:
+        return
     out = query_whois(d)
     ask_store_result("WHOIS Query", d, out)
 
 def do_gobuster():
-    url = input("Enter URL: ")
-    wordlist = input("Enter wordlist path (default /usr/share/seclists/Discovery/Web-Content/common.txt): ")
+    url = safe_input("Enter URL: ")
+    if url is None:
+        return
+    wordlist = safe_input("Enter wordlist path (default /usr/share/seclists/Discovery/Web-Content/common.txt): ")
+    if wordlist is None:
+        return
     if not wordlist:
         wordlist = "/usr/share/seclists/Discovery/Web-Content/common.txt"
     out = capture_cmd_output(["gobuster", "dir", "-u", url, "-w", wordlist, "-t", "50"])
@@ -490,24 +575,26 @@ def menu_scan():
         print("8 - WHOIS Query")
         print("9 - Gobuster Scan")
         print("10 - Return")
-        c = input("Choose: ")
-        if c=='1':
+        c = safe_input("Choose: ")
+        if c is None:
+            break
+        if c == '1':
             do_full_scan()
-        elif c=='2':
+        elif c == '2':
             do_web_recon()
-        elif c=='3':
+        elif c == '3':
             do_sql_injection_test()
-        elif c=='4':
+        elif c == '4':
             do_smtp_enum()
-        elif c=='5':
+        elif c == '5':
             do_ssh_enum()
-        elif c=='6':
+        elif c == '6':
             do_nuclei_hunter()
-        elif c=='7':
+        elif c == '7':
             do_silence_scan()
-        elif c=='8':
+        elif c == '8':
             do_whois()
-        elif c=='9':
+        elif c == '9':
             do_gobuster()
         else:
             break
@@ -558,24 +645,43 @@ HELP / HOW TO USE:
 
 1) MANAGE PROJECTS:
    - Create Project: Creates a password-protected project to store notes and scan results.
-   - Open Project (view/edit notes): Lists notes, allows reading/editing/exporting, etc.
+   - Open Project (view/edit notes): Lists notes and allows reading, editing, deletion or export.
 
 2) SCAN TOOLS:
-   - Full Web Scan: Combines multiple tools (whatweb, webrecon, nmap, gobuster, etc.) 
-   - Web Recon: Uses wget to mirror a site, searches for specific patterns 
-   - SQLi Test: Quick check for SQL injection with sqlmap
-   - SMTP Enum: VRFY user enumeration on an SMTP server
-   - SSH Enum: Tests SSH login with provided credentials
-   - Nuclei Hunter: Subfinder + Nuclei template-based scanning
-   - Silent Scan: Minimal, stealthy nmap scan
-   - WHOIS Query: Looks up domain registration details
-   - Gobuster Scan: Directory scan using gobuster
+   - Full Web Scan: Combines multiple tools (whatweb, webrecon, nmap, gobuster, etc.)
+   - Web Recon: Uses wget to mirror a site and searches for specific patterns.
+   - SQLi Test: Quick check for SQL injection using sqlmap.
+   - SMTP Enum: Enumerates SMTP users via VRFY command.
+   - SSH Enum: Tests SSH login with provided credentials.
+   - Nuclei Hunter: Subfinder + Nuclei template-based scanning.
+   - Silent Scan: Minimal, stealthy nmap scan.
+   - WHOIS Query: Retrieves domain registration details.
+   - Gobuster Scan: Directory scanning using gobuster.
 
-3) UPDATE TOOLKIT:
-   - Pulls the latest version from GitHub
+3) INTERACTIVE SHELL USAGE:
+   - Ao executar o Web-Toolkit sem parâmetros, você acessa um menu interativo.
+   - No menu principal, escolha entre Gerenciar Projetos, Scan Tools, Help ou Update Toolkit.
+   - Dentro dos menus, utilize as opções numéricas para navegar e executar as funções desejadas.
+   - As entradas (inputs) podem ser canceladas com Ctrl+C, retornando a operação de forma amigável.
+
+4) UPDATE TOOLKIT:
+   - Atualiza o toolkit para a última versão disponível no GitHub.
 
 STORING RESULTS:
-After scans, you can choose a project to encrypt and store your output.
+Após a execução dos scans, você pode escolher um projeto para criptografar e armazenar os resultados.
+
+Usage via CLI (exemplos):
+   --scan-full <target>
+   --web <url>
+   --sql <url>
+   --smtp <ip>
+   --ssh <ip>
+   --nuclei-scan <domain> <template>
+   --scan-silence <target>
+   --whois <domain>
+   --update
+
+Pressione Ctrl+C para cancelar uma operação a qualquer momento.
 """)
 
 def main_menu():
@@ -586,26 +692,30 @@ def main_menu():
         print("3 - Help")
         print("4 - Update Toolkit")
         print("5 - Exit")
-        choice = input("Choose: ")
-        if choice=='1':
+        choice = safe_input("Choose: ")
+        if choice is None:
+            break
+        if choice == '1':
             while True:
                 print("\n1 - Create Project")
                 print("2 - Open Project (view/edit notes)")
                 print("3 - Return to main menu")
-                c2 = input("Choose: ")
-                if c2=='1':
+                c2 = safe_input("Choose: ")
+                if c2 is None:
+                    break
+                if c2 == '1':
                     create_project()
-                elif c2=='2':
+                elif c2 == '2':
                     open_project()
                 else:
                     break
-        elif choice=='2':
+        elif choice == '2':
             menu_scan()
-        elif choice=='3':
+        elif choice == '3':
             show_help()
-        elif choice=='4':
+        elif choice == '4':
             update_toolkit()
-        elif choice=='5':
+        elif choice == '5':
             break
         else:
             print("Invalid.")
@@ -661,7 +771,7 @@ class Tests(unittest.TestCase):
         self.assertTrue(validate_url("http://example.com"))
         self.assertFalse(validate_url("example.com"))
 
-if __name__=="__main__":
+if __name__ == "__main__":
     if "--test" in sys.argv:
         sys.argv.remove("--test")
         unittest.main()
