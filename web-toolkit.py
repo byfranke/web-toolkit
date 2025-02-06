@@ -659,16 +659,16 @@ HELP / HOW TO USE:
    - Gobuster Scan: Directory scanning using gobuster.
 
 3) INTERACTIVE SHELL USAGE:
-   - Ao executar o Web-Toolkit sem parâmetros, você acessa um menu interativo.
-   - No menu principal, escolha entre Gerenciar Projetos, Scan Tools, Help ou Update Toolkit.
-   - Dentro dos menus, utilize as opções numéricas para navegar e executar as funções desejadas.
-   - As entradas (inputs) podem ser canceladas com Ctrl+C, retornando a operação de forma amigável.
+   - When running the Web-Toolkit without parameters, you access an interactive menu.
+   - In the main menu, choose from Manage Projects, Scan Tools, Help, or Update Toolkit.
+   - Within the menus, use the numeric options to navigate and execute the desired functions.
+   - Inputs can be canceled with Ctrl+C, returning to the operation in a friendly way.
 
 4) UPDATE TOOLKIT:
-   - Atualiza o toolkit para a última versão disponível no GitHub.
+   - Updates the toolkit to the latest version available on GitHub.
 
 STORING RESULTS:
-Após a execução dos scans, você pode escolher um projeto para criptografar e armazenar os resultados.
+After the scans are completed, you can choose a project to encrypt and store the results.
 
 Usage via CLI (exemplos):
    --scan-full <target>
