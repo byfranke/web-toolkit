@@ -18,49 +18,22 @@ from typing import List, Optional
 from cryptography.fernet import Fernet
 import datetime
 
-logging.basicConfig(
-    filename='web_toolkit.log',
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
+logging.basicConfig(filename='web_toolkit.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 home_dir = os.path.expanduser("~")
 db_dir = os.path.join(home_dir, 'Documents', 'WebToolkitDB')
 db_path = os.path.join(db_dir, 'web_toolkit.db')
 if not os.path.exists(db_dir):
     os.makedirs(db_dir)
-
 conn = sqlite3.connect(db_path)
 
 GITHUB_REPO = "https://github.com/byfranke/web-toolkit"
 
-# --------------------- Database Setup ---------------------
 def init_db():
-    conn.execute(
-        '''
-        CREATE TABLE IF NOT EXISTS projects (
-            id INTEGER PRIMARY KEY,
-            name TEXT NOT NULL,
-            encryption_key TEXT NOT NULL,
-            password_hash TEXT NOT NULL,
-            created_at TEXT NOT NULL
-        )
-        '''
-    )
-    conn.execute(
-        '''
-        CREATE TABLE IF NOT EXISTS notes (
-            id INTEGER PRIMARY KEY,
-            project_id INTEGER NOT NULL,
-            timestamp TEXT NOT NULL,
-            encrypted_note BLOB NOT NULL,
-            FOREIGN KEY(project_id) REFERENCES projects(id)
-        )
-        '''
-    )
+    conn.execute('''CREATE TABLE IF NOT EXISTS projects (id INTEGER PRIMARY KEY, name TEXT NOT NULL, encryption_key TEXT NOT NULL, password_hash TEXT NOT NULL, created_at TEXT NOT NULL)''')
+    conn.execute('''CREATE TABLE IF NOT EXISTS notes (id INTEGER PRIMARY KEY, project_id INTEGER NOT NULL, timestamp TEXT NOT NULL, encrypted_note BLOB NOT NULL, FOREIGN KEY(project_id) REFERENCES projects(id))''')
     conn.commit()
 
-# --------------------- Encryption Helpers ---------------------
 def gen_key():
     return Fernet.generate_key()
 
@@ -70,7 +43,6 @@ def enc_data(data: str, key: bytes) -> bytes:
 def dec_data(data: bytes, key: bytes) -> str:
     return Fernet(key).decrypt(data).decode()
 
-# --------------------- Project Management ---------------------
 def create_project():
     while True:
         name = input("Project name: ")
@@ -84,18 +56,7 @@ def create_project():
             continue
         key = gen_key()
         pwh = hashlib.sha256(pwd.encode()).hexdigest()
-        conn.execute(
-            '''
-            INSERT INTO projects (name, encryption_key, password_hash, created_at)
-            VALUES (?, ?, ?, ?)
-            ''',
-            (
-                name,
-                key,
-                pwh,
-                datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            )
-        )
+        conn.execute("INSERT INTO projects (name, encryption_key, password_hash, created_at) VALUES (?, ?, ?, ?)", (name, key, pwh, datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
         conn.commit()
         print("Project created.")
         break
@@ -111,10 +72,7 @@ def list_projects():
     return rows
 
 def get_project_by_id(pid: int):
-    c = conn.execute(
-        'SELECT id, name, encryption_key, password_hash FROM projects WHERE id = ?',
-        (pid,)
-    )
+    c = conn.execute('SELECT id, name, encryption_key, password_hash FROM projects WHERE id = ?', (pid,))
     return c.fetchone()
 
 def pick_project_id() -> int:
@@ -135,13 +93,7 @@ def store_note_in_project(project_id: int, content: str):
     ts = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     note_text = f"============##============\n{ts}\n{content}"
     enc_note = enc_data(note_text, enc_key)
-    conn.execute(
-        '''
-        INSERT INTO notes (project_id, timestamp, encrypted_note)
-        VALUES (?, ?, ?)
-        ''',
-        (pid, ts, enc_note)
-    )
+    conn.execute("INSERT INTO notes (project_id, timestamp, encrypted_note) VALUES (?, ?, ?)", (pid, ts, enc_note))
     conn.commit()
     print(f"Data saved to project: {pname}")
 
@@ -157,7 +109,6 @@ def open_project():
     if hashlib.sha256(pwd.encode()).hexdigest() != row[3]:
         print("Wrong password.")
         return
-
     while True:
         print("\n1 - Add Note")
         print("2 - List Notes")
@@ -169,13 +120,7 @@ def open_project():
             text = input("New note content: ")
             ts = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             enc_note = enc_data(text, row[2])
-            conn.execute(
-                '''
-                INSERT INTO notes (project_id, timestamp, encrypted_note)
-                VALUES (?, ?, ?)
-                ''',
-                (pid, ts, enc_note)
-            )
+            conn.execute("INSERT INTO notes (project_id, timestamp, encrypted_note) VALUES (?, ?, ?)", (pid, ts, enc_note))
             conn.commit()
             print("Note added.")
         elif choice == '2':
@@ -199,7 +144,6 @@ def manage_notes_in_project(pid: int, enc_key: bytes):
         return
     for n in notes:
         print(f"{n[0]} - {n[1]}")
-
     while True:
         nid_str = input("Enter note ID to read/edit (0 to cancel): ")
         if not nid_str.isdigit():
@@ -208,10 +152,7 @@ def manage_notes_in_project(pid: int, enc_key: bytes):
         nid = int(nid_str)
         if nid == 0:
             break
-        fcur = conn.execute(
-            'SELECT encrypted_note FROM notes WHERE id = ? AND project_id = ?',
-            (nid, pid)
-        )
+        fcur = conn.execute('SELECT encrypted_note FROM notes WHERE id = ? AND project_id = ?', (nid, pid))
         note_row = fcur.fetchone()
         if not note_row:
             print("Note not found.")
@@ -236,10 +177,7 @@ def manage_notes_in_project(pid: int, enc_key: bytes):
                     print("Invalid.")
                     continue
                 enc_note2 = enc_data(final_data, enc_key)
-                conn.execute(
-                    'UPDATE notes SET encrypted_note = ? WHERE id = ?',
-                    (enc_note2, nid)
-                )
+                conn.execute('UPDATE notes SET encrypted_note = ? WHERE id = ?', (enc_note2, nid))
                 conn.commit()
                 print("Note updated.")
             elif nopt == '2':
@@ -257,19 +195,14 @@ def export_note(pid: int, enc_key: bytes):
     if not notes:
         print("No notes.")
         return
-
     for n in notes:
         print(f"{n[0]} - {n[1]}")
-
     nid = input("Enter note ID to export: ")
     if not nid.isdigit():
         print("Invalid.")
         return
     nid = int(nid)
-    ecur = conn.execute(
-        'SELECT encrypted_note FROM notes WHERE id = ? AND project_id = ?',
-        (nid, pid)
-    )
+    ecur = conn.execute('SELECT encrypted_note FROM notes WHERE id = ? AND project_id = ?', (nid, pid))
     erow = ecur.fetchone()
     if not erow:
         print("Note not found.")
@@ -288,54 +221,24 @@ def export_note(pid: int, enc_key: bytes):
     except:
         print("Error decrypting note.")
 
-# --------------------- Dependencies & Tools ---------------------
-def install_dependencies():
-    logging.info("Installing necessary tools...")
-    if platform.system() == "Linux":
-        if check_tool_installed("apt-get"):
-            try:
-                subprocess.run(['sudo', 'apt-get', 'update'], check=True)
-                for t in ['nmap','sqlmap','wget','curl']:
-                    if not check_tool_installed(t):
-                        subprocess.run(['sudo','apt-get','install',t,'-y'], check=True)
-                logging.info("Installed with apt-get.")
-            except:
-                logging.exception("Error installing with apt-get.")
-        elif check_tool_installed("pacman"):
-            try:
-                subprocess.run(['sudo','pacman','-Syu','--noconfirm'], check=True)
-                for t in ['nmap','sqlmap','wget','curl']:
-                    if not check_tool_installed(t):
-                        subprocess.run(['sudo','pacman','-S','--noconfirm',t], check=True)
-                logging.info("Installed with pacman.")
-            except:
-                logging.exception("Error installing with pacman.")
-        else:
-            print("No supported package manager (apt-get or pacman).")
-    elif platform.system() == "Windows":
-        print("Install tools manually on Windows.")
-    else:
-        print("Unsupported OS.")
-
-def check_tool_installed(tool: str) -> bool:
-    try:
-        if platform.system() == "Windows":
-            subprocess.run(['where', tool], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
-        else:
-            subprocess.run(['which', tool], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
-        return True
-    except:
-        return False
-
 def capture_cmd_output(cmd: List[str]) -> str:
+    print(f"\nRunning: {' '.join(cmd)}")
+    print("Progress: ", end="", flush=True)
+    lines_buffer = []
     try:
-        p = subprocess.run(cmd, capture_output=True, text=True)
-        out = p.stdout
-        err = p.stderr
-        combined = out if out else ""
+        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        while True:
+            line = process.stdout.readline()
+            if not line and process.poll() is not None:
+                break
+            if line:
+                print(".", end="", flush=True)
+                lines_buffer.append(line)
+        err = process.stderr.read()
         if err:
-            combined += "\n[stderr]\n" + err
-        return combined.strip()
+            lines_buffer.append("\n[stderr]\n" + err)
+        print("\n")
+        return "".join(lines_buffer)
     except Exception as e:
         return f"Error running {cmd}: {e}"
 
@@ -422,11 +325,12 @@ def ssh_enum(ip:str) -> str:
     return "\n".join(output)
 
 def run_webrecon(url: str) -> str:
+    if not validate_url(url):
+        return "Invalid URL."
     if not check_tool_installed("wget"):
         return "wget not installed."
     out = capture_cmd_output(['wget', '-m', '-e', 'robots=off', url])
     out_final = ["[webrecon wget output]", out, "\nAnalyzing Page..."]
-
     pattern = re.compile(r'(username|user_name|userid|user_id|login|password|passwd|pass_word|pwd|secret|auth|access_token)', re.IGNORECASE)
     hits = []
     for root, _, files in os.walk('.'):
@@ -456,63 +360,44 @@ def sql_injection_test(url:str) -> str:
         return "Invalid URL."
     if not check_tool_installed("sqlmap"):
         return "sqlmap not installed."
-    return capture_cmd_output([
-        'sqlmap','-u',url,'--dbs',
-        '--tamper=space2comment','--random-agent',
-        '--forms','--crawl=2'
-    ])
+    return capture_cmd_output(['sqlmap','-u',url,'--dbs','--tamper=space2comment','--random-agent','--forms','--crawl=2'])
 
 def scan_web_full(target:str) -> str:
     if not (validate_ip(target) or validate_domain(target) or validate_url(target)):
         return "Invalid target."
     outputs = []
     sep = "\n============##============\n"
-
     if check_tool_installed("whatweb"):
         outputs.append("[whatweb output]\n" + capture_cmd_output(["whatweb", target]))
     else:
         outputs.append("whatweb not installed.")
-
     outputs.append("[webrecon output]\n" + run_webrecon(target))
-
     if check_tool_installed("nmap"):
-        out_nmap = capture_cmd_output([
-            "sudo","nmap","-v","-D","RND:25","-sS",
-            "--top-ports=25","--open","-T2","-Pn",target
-        ])
+        out_nmap = capture_cmd_output(["sudo","nmap","-v","-D","RND:25","-sS","--top-ports=25","--open","-T2","-Pn",target])
         outputs.append("[nmap output]\n" + out_nmap)
     else:
         outputs.append("nmap not installed.")
-
-    if check_tool_installed("dirsearch"):
-        out_dirsearch = capture_cmd_output([
-            "dirsearch","-u",target,"-i","200,301,302,401","--random-agent"
-        ])
-        outputs.append("[dirsearch output]\n" + out_dirsearch)
+    if check_tool_installed("gobuster"):
+        default_wordlist = "/usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt"
+        out_gobuster = capture_cmd_output(["gobuster", "dir", "-u", target, "-w", default_wordlist, "-t", "50"])
+        outputs.append("[gobuster output]\n" + out_gobuster)
     else:
-        outputs.append("dirsearch not installed.")
-
+        outputs.append("gobuster not installed.")
     if check_tool_installed("curl"):
         out_curl = capture_cmd_output(["curl","-v","-X","OPTIONS",target])
         outputs.append("[curl OPTIONS output]\n" + out_curl)
     else:
         outputs.append("curl not installed.")
-
     if check_tool_installed("nuclei-hunter"):
         out_nuc = capture_cmd_output(["nuclei-hunter",target,"http"])
         outputs.append("[nuclei-hunter output]\n" + out_nuc)
     else:
         outputs.append("nuclei-hunter not installed.")
-
     if check_tool_installed("nmap"):
-        out_nmap_vuln = capture_cmd_output([
-            "sudo","nmap","-v","--open","-sSCV","-Pn",
-            "-O",target,"--script=vuln"
-        ])
+        out_nmap_vuln = capture_cmd_output(["sudo","nmap","-v","--open","-sSCV","-Pn","-O",target,"--script=vuln"])
         outputs.append("[nmap vuln output]\n" + out_nmap_vuln)
     else:
         outputs.append("nmap not installed for vuln scan.")
-
     return sep.join(outputs)
 
 def nuclei_hunter_scan(domain:str, template:str) -> str:
@@ -522,10 +407,7 @@ def nuclei_hunter_scan(domain:str, template:str) -> str:
         return "subfinder or nuclei not installed."
     try:
         sf = subprocess.run(["subfinder","-d",domain], capture_output=True, text=True, check=True).stdout
-        template_path = os.path.join(
-            os.path.expanduser("~"),
-            ".local","nuclei-templates",template
-        )
+        template_path = os.path.join(os.path.expanduser("~"), ".local","nuclei-templates",template)
         out = subprocess.run(["nuclei","-t",template_path,"-c","50"], input=sf, text=True, capture_output=True)
         return "[nuclei-hunter scan]\n"+ out.stdout + (("\n[stderr]\n"+out.stderr) if out.stderr else "")
     except Exception as e:
@@ -536,10 +418,7 @@ def scan_web_silence(target:str) -> str:
         return "Invalid target."
     if not check_tool_installed("nmap"):
         return "nmap not installed."
-    return capture_cmd_output([
-        "sudo","nmap","-v","-D","RND:25","-sS","--top-ports=25",
-        "--open","-T2","-Pn",target
-    ])
+    return capture_cmd_output(["sudo","nmap","-v","-D","RND:25","-sS","--top-ports=25","--open","-T2","-Pn",target])
 
 def do_smtp_enum():
     ip = input("IP: ")
@@ -582,6 +461,14 @@ def do_whois():
     out = query_whois(d)
     ask_store_result("WHOIS Query", d, out)
 
+def do_gobuster():
+    url = input("Enter URL: ")
+    wordlist = input("Enter wordlist path (default /usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt): ")
+    if not wordlist:
+        wordlist = "/usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt"
+    out = capture_cmd_output(["gobuster", "dir", "-u", url, "-w", wordlist, "-t", "50"])
+    ask_store_result("Gobuster Scan", url, out)
+
 def ask_store_result(scan_name: str, target: str, result_data: str):
     combined = f"{scan_name} on: {target}\n\n{result_data}"
     print("\nScan completed.\n")
@@ -601,7 +488,8 @@ def menu_scan():
         print("6 - Nuclei Hunter")
         print("7 - Silent Scan")
         print("8 - WHOIS Query")
-        print("9 - Return")
+        print("9 - Gobuster Scan")
+        print("10 - Return")
         c = input("Choose: ")
         if c=='1':
             do_full_scan()
@@ -619,6 +507,8 @@ def menu_scan():
             do_silence_scan()
         elif c=='8':
             do_whois()
+        elif c=='9':
+            do_gobuster()
         else:
             break
 
@@ -630,30 +520,20 @@ def update_toolkit():
     except Exception as e:
         print(f"[!] Failed to clone repository: {e}")
         return
-
     backup_dir = f"Obsolete_{int(time.time())}"
     os.makedirs(backup_dir, exist_ok=True)
-
     print(f"[*] Moving old files to {backup_dir}...")
     for f in os.listdir('.'):
-        if f not in (
-            os.path.basename(sys.argv[0]),
-            'web_toolkit.log',
-            db_dir,
-            backup_dir,
-            '.git'
-        ):
+        if f not in (os.path.basename(sys.argv[0]), 'web_toolkit.log', db_dir, backup_dir, '.git'):
             try:
                 if os.path.isfile(f) or os.path.isdir(f):
                     subprocess.run(["mv", f, backup_dir])
             except:
                 pass
-
     for f in os.listdir(TEMP_DIR):
         src = os.path.join(TEMP_DIR, f)
         dst = os.path.join('.', f)
         subprocess.run(["mv", src, dst])
-
     subprocess.run(["rm", "-rf", TEMP_DIR])
     print(f"[+] Updated to the latest version from GitHub. Old files moved to '{backup_dir}'.")
 
@@ -681,7 +561,7 @@ HELP / HOW TO USE:
    - Open Project (view/edit notes): Lists notes, allows reading/editing/exporting, etc.
 
 2) SCAN TOOLS:
-   - Full Web Scan: Combines multiple tools (whatweb, webrecon, nmap, etc.) 
+   - Full Web Scan: Combines multiple tools (whatweb, webrecon, nmap, gobuster, etc.) 
    - Web Recon: Uses wget to mirror a site, searches for specific patterns 
    - SQLi Test: Quick check for SQL injection with sqlmap
    - SMTP Enum: VRFY user enumeration on an SMTP server
@@ -689,78 +569,50 @@ HELP / HOW TO USE:
    - Nuclei Hunter: Subfinder + Nuclei template-based scanning
    - Silent Scan: Minimal, stealthy nmap scan
    - WHOIS Query: Looks up domain registration details
+   - Gobuster Scan: Directory scan using gobuster
 
-3) INSTALL DEPENDENCIES:
-   - Installs nmap, sqlmap, wget, curl if missing (only Debian/Arch supported)
-
-4) UPDATE TOOLKIT:
+3) UPDATE TOOLKIT:
    - Pulls the latest version from GitHub
 
 STORING RESULTS:
 After scans, you can choose a project to encrypt and store your output.
-
-EXAMPLE STEPS:
-   - Create a project and set a password
-   - Perform Full Web Scan
-   - Save results to the project
-   - Later, open the project to view or export
-
-CLI USAGE:
-   --install
-   --scan-full <target>
-   --web <url>
-   --sql <url>
-   --smtp <ip>
-   --ssh <ip>
-   --nuclei-scan <domain> <template>
-   --scan-silence <target>
-   --whois <domain>
-   --update (updates the toolkit to the latest version)
 """)
 
 def main_menu():
     while True:
-        try:
-            show_banner()
-            print("1 - Manage Projects")
-            print("2 - Scan Tools")
-            print("3 - Install Dependencies")
-            print("4 - Help")
-            print("5 - Update Toolkit")
-            print("6 - Exit")
-            choice = input("Choose: ")
-            if choice=='1':
-                while True:
-                    print("\n1 - Create Project")
-                    print("2 - Open Project (view/edit notes)")
-                    print("3 - Return to main menu")
-                    c2 = input("Choose: ")
-                    if c2=='1':
-                        create_project()
-                    elif c2=='2':
-                        open_project()
-                    else:
-                        break
-            elif choice=='2':
-                menu_scan()
-            elif choice=='3':
-                install_dependencies()
-            elif choice=='4':
-                show_help()
-            elif choice=='5':
-                update_toolkit()
-            elif choice=='6':
-                break
-            else:
-                print("Invalid.")
-        except KeyboardInterrupt:
-            print("\nInterrupted.")
+        show_banner()
+        print("1 - Manage Projects")
+        print("2 - Scan Tools")
+        print("3 - Help")
+        print("4 - Update Toolkit")
+        print("5 - Exit")
+        choice = input("Choose: ")
+        if choice=='1':
+            while True:
+                print("\n1 - Create Project")
+                print("2 - Open Project (view/edit notes)")
+                print("3 - Return to main menu")
+                c2 = input("Choose: ")
+                if c2=='1':
+                    create_project()
+                elif c2=='2':
+                    open_project()
+                else:
+                    break
+        elif choice=='2':
+            menu_scan()
+        elif choice=='3':
+            show_help()
+        elif choice=='4':
+            update_toolkit()
+        elif choice=='5':
             break
+        else:
+            print("Invalid.")
 
 def main():
     init_db()
     parser = argparse.ArgumentParser(description="Web Toolkit")
-    parser.add_argument('--install', action='store_true')
     parser.add_argument('--scan-full', type=str)
     parser.add_argument('--web', type=str)
     parser.add_argument('--sql', type=str)
@@ -771,10 +623,7 @@ def main():
     parser.add_argument('--whois', type=str)
     parser.add_argument('--update', action='store_true', help='Update the toolkit from GitHub.')
     args = parser.parse_args()
-
-    if args.install:
-        install_dependencies()
-    elif args.scan_full:
+    if args.scan_full:
         res = scan_web_full(args.scan_full)
         print(res)
     elif args.web:
