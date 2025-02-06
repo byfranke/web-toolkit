@@ -57,7 +57,7 @@ git clone https://github.com/byfranke/web-toolkit
 ```
 Step : 2 Move to directory
 ```
-cd web-toolkit
+cd web-toolkit/Tools
 ```
 Step : 3 Permission and Execute
 ```
