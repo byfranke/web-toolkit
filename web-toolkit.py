@@ -463,9 +463,9 @@ def do_whois():
 
 def do_gobuster():
     url = input("Enter URL: ")
-    wordlist = input("Enter wordlist path (default /usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt): ")
+    wordlist = input("Enter wordlist path (default /usr/share/seclists/Discovery/Web-Content/common.txt): ")
     if not wordlist:
-        wordlist = "/usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt"
+        wordlist = "/usr/share/seclists/Discovery/Web-Content/common.txt"
     out = capture_cmd_output(["gobuster", "dir", "-u", url, "-w", wordlist, "-t", "50"])
     ask_store_result("Gobuster Scan", url, out)
 
