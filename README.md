@@ -101,10 +101,4 @@ Web-Toolkit also supports CLI arguments for quick operations:
 
 ---
 
-## Donations
-
-If you find Web-Toolkit useful and wish to support its development and maintenance, consider making a donation. Your contribution helps keep the project updated for the cybersecurity community.
-
-**Bitcoin Address**: `bc1qkdh3eqpj87q5hlhc7pvm025hmsd9zp2kadxf76`
-
 Web-Toolkit is continuously evolving. Contributions, bug reports, and feature requests are always welcome!
