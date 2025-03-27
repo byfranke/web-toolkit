@@ -12,7 +12,7 @@ echo "_oo_oo__o__oo______oo___oo________oo__o_oo___oo_oo___oo__oo___oo__o___oo__
 echo "__oo__oo____ooooo__oooooo__________ooo___ooooo___ooooo__ooooo_oo___o_oooo___ooo__"
 echo "_________________________________________________________________________________"
 echo
-echo "                              WEB-TOOLKIT byfranke"
+echo "                          WEB-TOOLKIT | byfranke.com"
 echo "---------------------------------------------------------------------------------"
 }
 
