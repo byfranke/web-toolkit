@@ -634,7 +634,7 @@ _oo_oo__o__oo______oo___oo________oo__o_oo___oo_oo___oo__oo___oo__o___oo___oo__o
 __oo__oo____ooooo__oooooo__________ooo___ooooo___ooooo__ooooo_oo___o_oooo___ooo__
 _________________________________________________________________________________
 
-                              WEB-TOOLKIT byfranke
+                            WEB-TOOLKIT byfranke.com
 ---------------------------------------------------------------------------------
 """
     print(banner)
