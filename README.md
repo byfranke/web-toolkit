@@ -102,3 +102,10 @@ Web-Toolkit also supports CLI arguments for quick operations:
 ---
 
 Web-Toolkit is continuously evolving. Contributions, bug reports, and feature requests are always welcome!
+
+
+## Donation Support
+
+This tool is maintained through community support. Help keep it active:
+
+[![Donate](https://img.shields.io/badge/Support-Development-blue?style=for-the-badge&logo=github)](https://donate.stripe.com/28o8zQ2wY3Dr57G001)
