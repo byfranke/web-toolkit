@@ -121,7 +121,6 @@ web-toolkit/
 ├── database/                   # Database files
 ├── logs/                       # Application logs
 ├── docs/                       # Documentation
-└── .github/                    # CI/CD workflows
 ```
 
 ## Configuration
@@ -238,8 +237,7 @@ black modules/ --check
 
 ### Community
 - **Issues**: [GitHub Issues](https://github.com/byfranke/web-toolkit/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/byfranke/web-toolkit/discussions)
-- **Security Reports**: security@byfranke.com
+- **Security Reports**: contact@byfranke.com
 
 ## License
 
