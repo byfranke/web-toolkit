@@ -229,12 +229,6 @@ black modules/ --check
 
 ## Support
 
-### Documentation
-- **Installation Guide**: `docs/INSTALLATION.md`
-- **User Manual**: `docs/USER_MANUAL.md`
-- **API Documentation**: `docs/API.md`
-- **Security Analysis**: `docs/SECURITY_ANALYSIS.md`
-
 ### Community
 - **Issues**: [GitHub Issues](https://github.com/byfranke/web-toolkit/issues)
 - **Security Reports**: contact@byfranke.com
