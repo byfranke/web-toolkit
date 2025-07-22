@@ -1257,10 +1257,10 @@ def show_banner():
     banner = """
 ================================================================================
                             WEB-TOOLKIT PROFESSIONAL                           
-                        Advanced Web Security Testing Framework                
+                    Advanced Web Security Testing Framework                
 ================================================================================
-                               Version 2.0 - byfranke.com                     
-                          Professional Penetration Testing Suite               
+                          Version 2.0 - byfranke.com                     
+                    Professional Penetration Testing Suite               
 ================================================================================
 """
     console.print(banner)
@@ -1269,7 +1269,7 @@ def show_help():
     """Display comprehensive help documentation"""
     help_text = """
 ================================================================================
-                           WEB-TOOLKIT PROFESSIONAL HELP                      
+                          WEB-TOOLKIT PROFESSIONAL HELP                      
 ================================================================================
 
 OVERVIEW:
