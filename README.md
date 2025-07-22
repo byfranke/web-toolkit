@@ -1,4 +1,4 @@
-# Web-Toolkit
+# WEB-TOOLKIT PROFESSIONAL
 
 Professional penetration testing toolkit with automated vulnerability detection and comprehensive security assessment capabilities.
 
